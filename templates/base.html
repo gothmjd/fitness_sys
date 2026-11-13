@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FitPlate · Plan semanal</title>
+<style>
+:root{--green:#2e7d32;--lime:#7cb342;--orange:#ff9800;--teal:#00897b;--red:#e53935;--ink:#1b3a1f;--card:#ffffffee}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Segoe UI",system-ui,-apple-system,sans-serif;color:var(--ink);min-height:100vh;
+  background:linear-gradient(135deg,#e8f5e9 0%,#f1f8e9 45%,#fff8e1 100%) fixed}
+.bg{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.bg span{position:absolute;font-size:5rem;opacity:.13;animation:float 11s ease-in-out infinite}
+@keyframes float{50%{transform:translateY(-26px) rotate(8deg)}}
+header.hero{position:relative;z-index:1;background:linear-gradient(120deg,#2e7d32,#7cb342 60%,#ffb300);color:#fff;
+  padding:28px 20px 56px;text-align:center;box-shadow:0 6px 24px #2e7d3240}
+header.hero h1{margin:0;font-size:2.2rem;letter-spacing:.5px}
+header.hero p{margin:6px 0 0;opacity:.95}
+nav{margin-top:14px}
+nav a{color:#fff;text-decoration:none;font-weight:600;margin:0 10px;padding:6px 14px;border-radius:999px;
+  background:#ffffff26;display:inline-block}
+nav a:hover{background:#ffffff40}
+main{position:relative;z-index:1;max-width:1180px;margin:-36px auto 40px;padding:0 16px}
+.card{background:var(--card);border-radius:20px;padding:22px;box-shadow:0 10px 30px #1b3a1f1f;margin-bottom:22px;
+  backdrop-filter:blur(4px)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:22px}
+.stat{background:#fff;border-radius:18px;padding:16px 18px;box-shadow:0 8px 20px #1b3a1f18;border-left:6px solid var(--lime)}
+.stat.o{border-color:var(--orange)} .stat.t{border-color:var(--teal)}
+.stat small{display:block;opacity:.7;font-weight:600}
+.stat b{font-size:1.7rem}
+h2{margin:0 0 14px;color:var(--green)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+label{font-weight:600;font-size:.9rem;display:block;margin-bottom:4px}
+.pair{display:grid;grid-template-columns:1fr 110px;gap:8px}
+input,select{width:100%;padding:10px 12px;border:2px solid #c5e1a5;border-radius:12px;font-size:1rem;background:#fff;
+  color:var(--ink);transition:.2s}
+input:focus,select:focus{outline:none;border-color:var(--lime);box-shadow:0 0 0 4px #7cb34233}
+.total{margin:16px 0;font-size:1.15rem;font-weight:700;color:var(--green)}
+.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px}
+.btn{border:0;cursor:pointer;color:#fff;font-weight:800;font-size:1rem;letter-spacing:.5px;text-transform:uppercase;
+  padding:13px 26px;border-radius:999px;text-decoration:none;display:inline-flex;align-items:center;gap:8px;
+  box-shadow:0 6px 0 #0003,0 10px 18px #0002;transition:transform .15s, box-shadow .15s, filter .15s}
+.btn:hover{transform:translateY(-3px);filter:brightness(1.08)}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 #0003}
+.btn.add{background:linear-gradient(135deg,#43a047,#7cb342)}
+.btn.find{background:linear-gradient(135deg,#00897b,#26c6da)}
+.btn.update{background:linear-gradient(135deg,#fb8c00,#ffca28)}
+.btn.delete{background:linear-gradient(135deg,#e53935,#ff7043)}
+.btn.clear,.btn.pdf{background:linear-gradient(135deg,#6a1b9a,#ab47bc)}
+.btn.pdf{background:linear-gradient(135deg,#1565c0,#42a5f5)}
+.flash{padding:12px 16px;border-radius:14px;margin-bottom:14px;font-weight:600}
+.flash.ok{background:#dcedc8;color:#33691e}.flash.error{background:#ffe0b2;color:#bf360c}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:820px}
+th{background:linear-gradient(135deg,#43a047,#7cb342);color:#fff;padding:10px;text-align:left;font-size:.9rem}
+th:first-child{border-radius:12px 0 0 0}th:last-child{border-radius:0 12px 0 0}
+td{padding:10px;border-bottom:1px solid #e0efd0;vertical-align:top}
+tr:nth-child(even) td{background:#f6fbef}
+td small{display:block;color:#558b2f;font-weight:600}
+.money{font-weight:800;color:var(--green);white-space:nowrap}
+.mini{border:0;cursor:pointer;border-radius:10px;padding:6px 10px;font-size:1rem;margin-right:4px}
+.mini.edit{background:#fff3cd}.mini.del{background:#ffd9d4}
+.banner{background:#e0f7fa;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-weight:600}
+.tips li{margin-bottom:8px;line-height:1.5}
+.sec h3{margin:0 0 8px;color:var(--green)}
+footer{position:relative;z-index:1;text-align:center;padding:10px 0 30px;opacity:.7;font-size:.85rem}
+@media(max-width:600px){header.hero h1{font-size:1.6rem}.btn{width:100%;justify-content:center}}
+</style>
+</head>
+<body>
+<div class="bg" aria-hidden="true">
+  <span style="top:8%;left:4%">🥗</span><span style="top:18%;right:6%;animation-delay:-3s">🏋️</span>
+  <span style="top:48%;left:10%;animation-delay:-5s">🍎</span><span style="top:60%;right:8%;animation-delay:-2s">🥑</span>
+  <span style="top:82%;left:30%;animation-delay:-7s">🏃</span><span style="top:35%;left:48%;animation-delay:-4s">🥦</span>
+  <span style="top:85%;right:25%;animation-delay:-6s">🍌</span>
+</div>
+<header class="hero">
+  <h1>🥗 FitPlate · Plan semanal saludable 💪</h1>
+  <p>Organiza tu comida, ejercicio y descanso, y controla tu presupuesto.</p>
+  <nav><a href="{{ url_for('index') }}">🏠 Plan</a><a href="{{ url_for('reporte') }}">📋 Reporte de consejos</a></nav>
+</header>
+<main>
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% for cat, m in msgs %}<div class="flash {{ cat }}">{{ m }}</div>{% endfor %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</main>
+<footer>Datos ficticios con fines lúdicos · No sustituye consejo médico o nutricional</footer>
+{% block scripts %}{% endblock %}
+</body>
+</html>

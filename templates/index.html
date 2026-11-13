@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="stats">
+  <div class="stat"><small>💰 Budget semanal</small><b>${{ '%.2f'|format(budget_semanal) }}</b></div>
+  <div class="stat o"><small>📅 Promedio diario</small><b>${{ '%.2f'|format(promedio) }}</b></div>
+  <div class="stat t"><small>🗓️ Días registrados</small><b>{{ n }} / 7</b></div>
+</div>
+
+<section class="card">
+  <h2>🍽️ Registro del día</h2>
+  <form id="frm" method="post">
+    <input type="hidden" name="id" id="id">
+    <div class="grid">
+      <div><label>📆 Día</label>
+        <select name="dia" id="dia">
+          <option value="">— Elige un día —</option>
+          {% for d in dias %}<option>{{ d }}</option>{% endfor %}
+        </select></div>
+      <div><label>🌅 Desayuno</label>
+        <div class="pair"><input name="desayuno" placeholder="Avena con fruta" maxlength="255">
+        <input name="coste_desayuno" class="cost" type="number" step="0.01" min="0" placeholder="$"></div></div>
+      <div><label>🍛 Comida</label>
+        <div class="pair"><input name="comida" placeholder="Pollo, arroz y ensalada" maxlength="255">
+        <input name="coste_comida" class="cost" type="number" step="0.01" min="0" placeholder="$"></div></div>
+      <div><label>🌙 Cena</label>
+        <div class="pair"><input name="cena" placeholder="Sopa de verduras" maxlength="255">
+        <input name="coste_cena" class="cost" type="number" step="0.01" min="0" placeholder="$"></div></div>
+      <div><label>🍏 Snack</label>
+        <div class="pair"><input name="snack" placeholder="Yogur y nueces" maxlength="255">
+        <input name="coste_snack" class="cost" type="number" step="0.01" min="0" placeholder="$"></div></div>
+      <div><label>🏃 Ejercicio</label>
+        <input name="ejercicio" placeholder="30 min de cardio + pesas" maxlength="255"></div>
+      <div><label>😴 Descanso (horas)</label>
+        <input name="descanso_horas" type="number" step="0.25" min="0" max="24" placeholder="8"></div>
+    </div>
+    <div class="total">💵 Coste diario: $<span id="totalDia">0.00</span></div>
+    <div class="actions">
+      <button class="btn add" formaction="{{ url_for('add') }}" formmethod="post">➕ Add</button>
+      <button class="btn find" formaction="{{ url_for('index') }}" formmethod="get">🔍 Find</button>
+      <button class="btn update" formaction="{{ url_for('update') }}" formmethod="post">🔄 Update</button>
+      <button class="btn delete" formaction="{{ url_for('delete') }}" formmethod="post"
+              onclick="return confirm('¿Eliminar el registro seleccionado?')">🗑️ Delete</button>
+      <a class="btn clear" href="{{ url_for('index') }}" onclick="document.getElementById('id').value=''">✨ Limpiar</a>
+      <a class="btn pdf" href="{{ url_for('reporte') }}">📋 Ver reporte</a>
+    </div>
+  </form>
+</section>
+
+<section class="card">
+  <h2>📊 Mi semana</h2>
+  {% if filtrado %}<div class="banner">🔍 Mostrando resultados filtrados · <a href="{{ url_for('index') }}">Ver todos</a></div>{% endif %}
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>Día</th><th>Desayuno</th><th>Comida</th><th>Cena</th><th>Snack</th><th>Ejercicio</th>
+      <th>Descanso</th><th>Coste diario ($)</th><th>Acciones</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td><b>{{ r.dia }}</b></td>
+        <td>{{ r.desayuno }}<small>${{ '%.2f'|format(r.coste_desayuno) }}</small></td>
+        <td>{{ r.comida }}<small>${{ '%.2f'|format(r.coste_comida) }}</small></td>
+        <td>{{ r.cena }}<small>${{ '%.2f'|format(r.coste_cena) }}</small></td>
+        <td>{{ r.snack }}<small>${{ '%.2f'|format(r.coste_snack) }}</small></td>
+        <td>{{ r.ejercicio }}</td>
+        <td>{{ '%.1f'|format(r.descanso_horas) }} h</td>
+        <td class="money">${{ '%.2f'|format(r.coste_diario) }}</td>
+        <td>
+          <button type="button" class="mini edit" title="Editar" data-row='{{ r|tojson }}' onclick="editRow(this)">✏️</button>
+          <form method="post" action="{{ url_for('delete') }}" style="display:inline"
+                onsubmit="return confirm('¿Eliminar {{ r.dia }}?')">
+            <input type="hidden" name="id" value="{{ r.id }}">
+            <button class="mini del" title="Eliminar">🗑️</button>
+          </form>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="9" style="text-align:center;padding:24px">Aún no hay registros. ¡Agrega tu primer día saludable! 🌱</td></tr>
+    {% endfor %}
+    </tbody>
+    {% if rows %}
+    <tfoot><tr><td colspan="7" style="text-align:right;font-weight:800">Budget semanal total</td>
+      <td class="money">${{ '%.2f'|format(budget_semanal) }}</td><td></td></tr></tfoot>
+    {% endif %}
+  </table>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const form = document.getElementById('frm');
+function recalc(){
+  let t = 0;
+  document.querySelectorAll('.cost').forEach(i => t += parseFloat(i.value) || 0);
+  document.getElementById('totalDia').textContent = t.toFixed(2);
+}
+document.querySelectorAll('.cost').forEach(i => i.addEventListener('input', recalc));
+function editRow(btn){
+  const r = JSON.parse(btn.dataset.row);
+  document.getElementById('id').value = r.id;
+  ['dia','desayuno','comida','cena','snack','ejercicio','descanso_horas',
+   'coste_desayuno','coste_comida','coste_cena','coste_snack'].forEach(k => {
+    if (form.elements[k]) form.elements[k].value = r[k];
+  });
+  recalc();
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+</script>
+{% endblock %}

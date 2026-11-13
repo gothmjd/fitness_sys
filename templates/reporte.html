@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="stats">
+  <div class="stat"><small>💰 Budget semanal</small><b>${{ '%.2f'|format(rep.budget) }}</b></div>
+  <div class="stat o"><small>📅 Promedio diario</small><b>${{ '%.2f'|format(rep.promedio) }}</b></div>
+  <div class="stat t"><small>📈 Proyección 7 días</small><b>${{ '%.2f'|format(rep.proyeccion) }}</b></div>
+</div>
+
+<section class="card">
+  <h2>📋 Reporte de consejos saludables</h2>
+  {% if rep.n == 0 %}
+    <p>Aún no hay registros. Agrega al menos un día en el <a href="{{ url_for('index') }}">plan semanal</a> para generar tu reporte. 🌱</p>
+  {% else %}
+    <p>Generado a partir de tus {{ rep.n }} día(s) registrados y tu presupuesto semanal.</p>
+    <div class="actions" style="margin-bottom:18px">
+      <a class="btn pdf" href="{{ url_for('reporte_pdf') }}">⬇️ Descargar PDF</a>
+      <a class="btn clear" href="{{ url_for('index') }}">🏠 Volver al plan</a>
+    </div>
+    {% for s in rep.sections %}
+      <div class="sec">
+        <h3>{{ s.icon }} {{ s.title }}</h3>
+        <ul class="tips">{% for t in s.tips %}<li>{{ t }}</li>{% endfor %}</ul>
+      </div>
+    {% endfor %}
+  {% endif %}
+</section>
+{% endblock %}
