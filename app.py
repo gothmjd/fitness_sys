@@ -68,8 +68,17 @@ def connect():
         cursorclass=DictCursor,
         connect_timeout=10,
     )
-    if os.environ.get("DB_SSL", "false").lower() == "true":
-        kwargs["ssl"] = ssl.create_default_context()
+    if os.environ.get("DB_SSL", "false").strip().lower() == "true":
+        # Aiven proporciona un certificado CA PEM. Se guarda como variable
+        # de entorno para no incluir archivos ni secretos en el repositorio.
+        ca_cert = os.environ.get("DB_SSL_CA", "").strip()
+        if not ca_cert:
+            raise RuntimeError(
+                "DB_SSL=true requiere DB_SSL_CA con el contenido PEM del certificado CA."
+            )
+        # create_default_context conserva la validación del certificado y del hostname.
+        ssl_context = ssl.create_default_context(cadata=ca_cert)
+        kwargs["ssl"] = ssl_context
     return pymysql.connect(**kwargs)
 
 
