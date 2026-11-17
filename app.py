@@ -16,7 +16,10 @@ from fpdf import FPDF
 from pymysql.cursors import DictCursor
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "dev-only-change-me")
+_secret_key = os.environ.get("SECRET_KEY")
+if os.environ.get("VERCEL_ENV") == "production" and not _secret_key:
+    raise RuntimeError("Falta configurar SECRET_KEY en el entorno Production de Vercel.")
+app.secret_key = _secret_key or "local-development-only-change-me"
 
 DIAS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
 FOOD_FIELDS = ["desayuno", "comida", "cena", "snack"]
@@ -58,27 +61,48 @@ _schema_ready = False
 # Base de datos
 # --------------------------------------------------------------------------
 def connect():
+    """Abre una conexión MySQL validando configuración y TLS."""
+    required = ("DB_HOST", "DB_USER", "DB_PASSWORD", "DB_NAME")
+    missing = [name for name in required if not os.environ.get(name)]
+    if missing:
+        raise RuntimeError("Faltan variables de conexión MySQL: " + ", ".join(missing))
+
+    try:
+        port = int(os.environ.get("DB_PORT", "3306"))
+    except ValueError as exc:
+        raise RuntimeError("DB_PORT debe ser un número entero.") from exc
+
     kwargs = dict(
-        host=os.environ.get("DB_HOST", "localhost"),
-        port=int(os.environ.get("DB_PORT", "3306")),
-        user=os.environ.get("DB_USER", "root"),
-        password=os.environ.get("DB_PASSWORD", ""),
-        database=os.environ.get("DB_NAME", "fitplate"),
+        host=os.environ["DB_HOST"].strip(),
+        port=port,
+        user=os.environ["DB_USER"],
+        password=os.environ["DB_PASSWORD"],
+        database=os.environ["DB_NAME"],
         charset="utf8mb4",
         cursorclass=DictCursor,
         connect_timeout=10,
+        read_timeout=15,
+        write_timeout=15,
     )
-    if os.environ.get("DB_SSL", "false").strip().lower() == "true":
-        # Aiven proporciona un certificado CA PEM. Se guarda como variable
-        # de entorno para no incluir archivos ni secretos en el repositorio.
+
+    ssl_enabled = os.environ.get(
+        "DB_SSL", "true" if os.environ.get("VERCEL") else "false"
+    ).strip().lower()
+    if ssl_enabled not in ("true", "false"):
+        raise RuntimeError("DB_SSL debe ser true o false.")
+    if ssl_enabled == "true":
         ca_cert = os.environ.get("DB_SSL_CA", "").strip()
         if not ca_cert:
             raise RuntimeError(
-                "DB_SSL=true requiere DB_SSL_CA con el contenido PEM del certificado CA."
+                "DB_SSL=true requiere DB_SSL_CA con el certificado CA PEM completo."
             )
-        # create_default_context conserva la validación del certificado y del hostname.
+        if "-----BEGIN CERTIFICATE-----" not in ca_cert:
+            raise RuntimeError("DB_SSL_CA no parece contener un certificado PEM válido.")
         ssl_context = ssl.create_default_context(cadata=ca_cert)
         kwargs["ssl"] = ssl_context
+    elif os.environ.get("VERCEL_ENV") == "production":
+        raise RuntimeError("La conexión MySQL de Production requiere DB_SSL=true.")
+
     return pymysql.connect(**kwargs)
 
 
@@ -457,6 +481,29 @@ def reporte_pdf():
     pdf_bytes = build_pdf(build_report(rows), rows)
     return send_file(io.BytesIO(pdf_bytes), mimetype="application/pdf",
                      as_attachment=True, download_name="reporte_saludable.pdf")
+
+
+@app.get("/health/db")
+def database_health():
+    """Comprueba TCP/TLS/autenticación y una consulta simple, sin crear tablas."""
+    try:
+        conn = connect()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1 AS connection_ok")
+                result = cur.fetchone()
+            return {"status": "ok", "database": "reachable", "check": result["connection_ok"]}, 200
+        finally:
+            conn.close()
+    except Exception as exc:
+        # No devolver mensajes de driver: pueden contener host, usuario u otros datos.
+        error_code = getattr(exc, "args", [None])[0]
+        return {
+            "status": "error",
+            "database": "unavailable",
+            "error_type": type(exc).__name__,
+            "error_code": error_code if isinstance(error_code, int) else None,
+        }, 503
 
 
 @app.errorhandler(pymysql.MySQLError)
